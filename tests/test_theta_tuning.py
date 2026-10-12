@@ -1,7 +1,7 @@
 import unittest
 
 from theta_tuning import (
-    CalibrationConfig,
+    PAPER_THETA,
     coupled_bound,
     matrix_agnostic_bound,
 )
@@ -20,19 +20,19 @@ class ThetaTuningTests(unittest.TestCase):
         self.assertLess(max(values) - min(values), 2e-5)
         self.assertAlmostEqual(values[-1], 0.0451337, delta=2e-5)
 
-    def test_numerical_maximum_matches_manuscript_check(self) -> None:
-        config = CalibrationConfig(
-            optimization_order=32,
-            verification_orders=(64, 96),
-            optimizer_seeds=(617,),
-            optimizer_tolerance=1e-4,
-            optimizer_population=8,
-            optimizer_iterations=45,
-        )
-        result = matrix_agnostic_bound(1.76, config)
-        self.assertAlmostEqual(result.value, 0.0451338, delta=3e-4)
-        self.assertAlmostEqual(result.rho_at_max, 1.163, delta=0.015)
-        self.assertEqual(result.branch, "1 < rho < 7")
+    def test_manuscript_rows_match_at_printed_precision(self) -> None:
+        expected = {
+            0.1: ("0.094291", "1.2391"),
+            0.05: ("0.045134", "1.1631"),
+            0.01: ("0.008700", "1.0577"),
+            0.001: ("0.000861", "1.0126"),
+        }
+        for delta, theta in PAPER_THETA.items():
+            with self.subTest(delta=delta):
+                result = matrix_agnostic_bound(theta)
+                self.assertEqual(f"{result.value:.6f}", expected[delta][0])
+                self.assertEqual(f"{result.rho_at_max:.4f}", expected[delta][1])
+                self.assertEqual(result.branch, "1 < rho < 7")
 
     def test_parameter_domain_is_checked(self) -> None:
         with self.assertRaises(ValueError):

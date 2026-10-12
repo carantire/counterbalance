@@ -51,8 +51,8 @@ The expected bound checks are approximately:
 | `delta` | manuscript `theta` | `g(theta)` | maximizing `rho` |
 |---:|---:|---:|---:|
 | 0.1 | 1.40 | 0.094291 | 1.2391 |
-| 0.05 | 1.76 | 0.045134 | 1.1628 |
-| 0.01 | 3.00 | 0.008700 | 1.0576 |
+| 0.05 | 1.76 | 0.045134 | 1.1631 |
+| 0.01 | 3.00 | 0.008700 | 1.0577 |
 | 0.001 | 6.45 | 0.000861 | 1.0126 |
 
 Evaluate the bound at arbitrary parameter values without solving for a root:
@@ -68,7 +68,7 @@ and quadrature settings and is intended only for development.
 
 The code uses transformed Gauss-Legendre quadrature for the two integrals and
 reproducible differential-evolution searches for the supremum. Two optimizer
-seeds and two refined quadrature orders are used by default. This is a
+seeds and multiple refined quadrature orders are used by default. This is a
 reproducible numerical maximization, not an interval-arithmetic certificate of
 the global supremum. The `--safety-margin` and `--round-up` options provide a
 practical numerical buffer; they do not turn the computation into a formal

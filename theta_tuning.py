@@ -41,11 +41,12 @@ class CalibrationConfig:
     """Accuracy and reproducibility settings for the numerical search."""
 
     optimization_order: int = 48
-    verification_orders: tuple[int, ...] = (96, 192)
+    verification_orders: tuple[int, ...] = (96, 192, 256)
     optimizer_seeds: tuple[int, ...] = (617, 9183)
     optimizer_tolerance: float = 3e-5
     optimizer_population: int = 10
     optimizer_iterations: int = 65
+    polish_iterations: int = 400
     alpha_min: float = 1e-8
     fraction_min: float = 1e-8
     theta_tolerance: float = 2e-4
@@ -270,8 +271,39 @@ def _maximize_coupled_branch(
             updating="immediate",
             workers=1,
         )
-        alpha, beta, fraction = _candidate_from_coordinates(optimum.x)
-        candidates.append((alpha, beta, fraction, bool(optimum.success)))
+        # The low-order global search locates the correct basin.  A local
+        # polish at the highest verification order removes the small shift in
+        # the reported maximizer caused by quadrature error in that search.
+        verification_order = max(config.verification_orders)
+
+        def refined_objective(coordinates: np.ndarray) -> float:
+            alpha, beta, _ = _candidate_from_coordinates(coordinates)
+            return -coupled_bound(
+                theta,
+                alpha,
+                beta,
+                quadrature_order=verification_order,
+            )
+
+        refined = optimize.minimize(
+            refined_objective,
+            optimum.x,
+            method="Nelder-Mead",
+            bounds=(
+                (lower_alpha, upper_alpha),
+                (lower_fraction, upper_fraction),
+            ),
+            options={
+                "xatol": 1e-9,
+                "fatol": 1e-13,
+                "maxiter": config.polish_iterations,
+            },
+        )
+        coordinates = refined.x if np.all(np.isfinite(refined.x)) else optimum.x
+        alpha, beta, fraction = _candidate_from_coordinates(coordinates)
+        candidates.append(
+            (alpha, beta, fraction, bool(optimum.success and refined.success))
+        )
 
     best: BoundResult | None = None
     for alpha, beta, fraction, success in candidates:
@@ -403,6 +435,7 @@ def _quick_config() -> CalibrationConfig:
         optimizer_tolerance=1e-4,
         optimizer_population=8,
         optimizer_iterations=45,
+        polish_iterations=200,
         theta_tolerance=5e-4,
     )
 
